@@ -4,7 +4,6 @@ from kafka import KafkaClient, SimpleConsumer, SimpleProducer
 from scrapy import log, Request
 from json import loads, dumps
 import logging
-from time import time
 import traceback, sys
 
 
@@ -86,6 +85,7 @@ class OneteraScheduler(FronteraScheduler):
                     self._pending_requests.clear()
                     self.results = []
                     self.results_sent = 0
+                    self.last_result_iteration = None
 
                     self.job_config = {
                         'workspace': msg['workspace'],
