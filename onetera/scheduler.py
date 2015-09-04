@@ -4,6 +4,7 @@ from kafka import KafkaClient, SimpleConsumer, SimpleProducer
 from scrapy import log, Request
 from json import loads, dumps
 import logging
+from time import time
 import traceback, sys
 
 
@@ -18,6 +19,7 @@ class OneteraScheduler(FronteraScheduler):
         self.is_active = False
         self.results = []
         self.results_sent = 0
+        self.last_result_iteration = None
 
         settings = self.frontier.manager.settings
         self.results_topic = settings.get("ONETERA_RESULTS_TOPIC")
@@ -60,8 +62,13 @@ class OneteraScheduler(FronteraScheduler):
         self._check_finished()
 
     def _check_finished(self):
-        if self.results_sent > self.job_config['nResults'] and self.is_active:
+        if not self.is_active:
+            return
+        if self.results_sent > self.job_config['nResults']:
             logger.info("Crawler reached the number of requested results. Crawling is stopping.")
+            self.is_active = False
+        if self.last_result_iteration and self.frontier.manager.iteration - self.last_result_iteration > 10:
+            logger.info("It looks like crawler get stuck. Stopping crawling.")
             self.is_active = False
 
     def _check_incoming(self):
@@ -103,7 +110,6 @@ class OneteraScheduler(FronteraScheduler):
             logger.fatal(traceback.format_tb(exc_traceback))
             logger.fatal("Got exception %s" % str(e))
 
-
     def _send_results(self):
         produced = 0
         if not self.results:
@@ -124,3 +130,4 @@ class OneteraScheduler(FronteraScheduler):
 
         if produced > 0:
             logger.info("Wrote %d results to output topic.", produced)
+            self.last_result_iteration = self.frontier.manager.iteration
