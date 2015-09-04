@@ -58,6 +58,7 @@ DOWNLOAD_DELAY = 0.0
 
 # logging
 LOGSTATS_INTERVAL = 10
+LOG_LEVEL = 'INFO'
 # EXTENSIONS = {
 #    'scrapy_jsonrpc.webservice.WebService': 500
 #    }
