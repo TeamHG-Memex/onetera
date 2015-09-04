@@ -40,7 +40,7 @@ class ContentProcessor(object):
         lx = LxmlParserLinkExtractor()
         self.linkextractor = FilteringLinkExtractor(lx, allow=(), deny=(), allow_domains=(),
                                                     deny_domains=(), restrict_xpaths=(), canonicalize=True,
-                                                    deny_extensions=None)
+                                                    deny_extensions=None, restrict_css=None)
         self.skip_text = skip_text
 
     def process_response(self, response):
