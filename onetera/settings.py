@@ -30,7 +30,7 @@ DOWNLOADER_MIDDLEWARES.update({
     'frontera.contrib.scrapy.middlewares.schedulers.SchedulerDownloaderMiddleware': 1000,
 })
 
-SCHEDULER = 'frontera.contrib.scrapy.schedulers.frontier.FronteraScheduler'
+SCHEDULER = 'onetera.scheduler.OneteraScheduler'
 SPIDER_MIDDLEWARES.update({
     'frontera.contrib.scrapy.middlewares.seeds.file.FileSeedLoader': 1,
 })
@@ -93,3 +93,11 @@ LOGGING_BACKEND_ENABLED = True
 LOGGING_DEBUGGING_ENABLED = False
 
 LOGGING_BACKEND_LOGLEVEL = logging.WARNING
+LOGGING_MANAGER_LOGLEVEL = logging.INFO
+
+
+KAFKA_LOCATION = "localhost:9092"
+ONETERA_GROUP = "onetera"
+ONETERA_RESULTS_TOPIC = "broadcrawler-output"
+ONETERA_INCOMING_TOPIC = "broadcrawler-input"
+
