@@ -13,7 +13,7 @@ class MemoryScoreBackend(MemoryBaseBackend):
                                                manager.logger.manager.debug)
 
     def _compare_pages(self, first, second):
-        return cmp(second.meta['score'], first.meta['score'])
+        return cmp(second.meta['scrapy_meta']['score'], first.meta['scrapy_meta']['score'])
 
     def get_next_requests(self, max_n_requests, **kwargs):
         return self._requests_buffer.get_next_requests(max_n_requests, **kwargs)
@@ -40,11 +40,8 @@ class RDBMSScoreBackend(SQLiteBackend):
 
     def _create_page(self, obj):
         db_page = super(RDBMSScoreBackend, self)._create_page(obj)
-        db_page.score = obj.meta['score']
+        db_page.score = obj.meta['scrapy_meta']['score']
         return db_page
-
-    def _create_request(self, db_page):
-        return self.manager.request_model(url=db_page.url, meta={'score': db_page.score})
 
     def cleanup(self):
         for name, table in Base.metadata.tables.items():

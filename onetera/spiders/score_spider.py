@@ -2,6 +2,7 @@ from scrapy.spider import Spider
 from scrapy.http import Request
 from scrapy.exceptions import DontCloseSpider
 from scrapy import signals
+from scrapy.utils.httpobj import urlparse_cached
 from classifier.content_processor import ContentProcessor
 from classifier.classifier import TopicClassifier
 
@@ -27,14 +28,16 @@ class ScoreSpider(Spider):
         if 'disabled' not in job_config:
             self.classifier = TopicClassifier.from_keywords(job_config['included'], job_config['excluded'])
 
-    # stable branch
-    def set_crawler(self, crawler):
-        super(ScoreSpider, self).set_crawler(crawler)
-        self.crawler.signals.connect(self.spider_idle, signal=signals.spider_idle)
-
     def spider_idle(self):
         self.log("Spider idle signal caught.")
         raise DontCloseSpider
+
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        spider = cls(*args, **kwargs)
+        spider._set_crawler(crawler)
+        spider.crawler.signals.connect(spider.spider_idle, signal=signals.spider_idle)
+        return spider
 
     def make_requests_from_url(self, url):
         r = super(ScoreSpider, self).make_requests_from_url(url)
@@ -52,15 +55,19 @@ class ScoreSpider(Spider):
         response.meta['descr'] = pc.meta_description
         response.meta['keywords'] = pc.meta_keywords
 
-        self.result_cb({
-            'score': response.meta['p_score'],
-            'url': response.url,
-            'title': response.meta['title'],
-            'descr': response.meta['descr'],
-            'keywords': response.meta['keywords']
-        })
+        if response.meta['p_score'] > 0:
+            self.result_cb({
+                'score': response.meta['p_score'],
+                'url': response.url,
+                'title': response.meta['title'],
+                'descr': response.meta['descr'],
+                'keywords': response.meta['keywords']
+            })
 
         for link in pc.links:
             r = Request(url=link.url)
             r.meta.update(link_text=link.text)
+            url_parts = urlparse_cached(r)
+            path_parts = url_parts.path.split('/')
+            r.meta['score'] = 1.0 / (len(path_parts) + 0.05*len(r.url))
             yield r
