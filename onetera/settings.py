@@ -9,6 +9,7 @@
 #
 from scrapy.settings.default_settings import SPIDER_MIDDLEWARES, DOWNLOADER_MIDDLEWARES
 import logging
+from os import environ
 
 BOT_NAME = 'onetera'
 
@@ -77,7 +78,8 @@ DELAY_ON_EMPTY = 5.0
 
 # Url storage
 BACKEND = 'onetera.backends.MemoryScoreBackend'
-#BACKEND = 'frontier.backend.RDBMSScoreBackend'
+'''
+BACKEND = 'frontier.backend.RDBMSScoreBackend'
 SQLALCHEMYBACKEND_ENGINE = 'sqlite:///url_storage.sqlite'
 SQLALCHEMYBACKEND_ENGINE_ECHO = False
 SQLALCHEMYBACKEND_DROP_ALL_TABLES = True
@@ -85,6 +87,7 @@ SQLALCHEMYBACKEND_CLEAR_CONTENT = True
 SQLALCHEMYBACKEND_MODELS = {
     'Page': 'onetera.backends.ScoredPage',
 }
+'''
 
 # Logging
 LOGGING_ENABLED = True
@@ -97,7 +100,7 @@ LOGGING_BACKEND_LOGLEVEL = logging.WARNING
 LOGGING_MANAGER_LOGLEVEL = logging.INFO
 
 
-KAFKA_LOCATION = "localhost:9092"
+KAFKA_LOCATION = environ["KAFKA_LOCATION"]
 ONETERA_GROUP = "onetera"
 ONETERA_RESULTS_TOPIC = "broadcrawler-output"
 ONETERA_INCOMING_TOPIC = "broadcrawler-input"

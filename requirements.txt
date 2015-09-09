@@ -1,3 +1,5 @@
-scrapy
 frontera
 nltk
+kafka-python
+service-identity
+pyasn1>=0.1.8
