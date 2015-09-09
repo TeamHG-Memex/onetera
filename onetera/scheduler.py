@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from frontera.contrib.scrapy.schedulers.frontier import FronteraScheduler
 from kafka import KafkaClient, SimpleConsumer, SimpleProducer
-from scrapy import log, Request
+from scrapy import Request
 from json import loads, dumps
 import logging
 import traceback, sys
