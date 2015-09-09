@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 ADD . /app
 
 RUN pip install -r /app/requirements.txt
+RUN python -m nltk.downloader punkt
 
 WORKDIR /app
 
