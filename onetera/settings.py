@@ -105,5 +105,5 @@ KAFKA_LOCATION = environ["KAFKA_LOCATION"] if "KAFKA_LOCATION" in environ else "
 
 ONETERA_GROUP = "onetera"
 ONETERA_RESULTS_TOPIC = "broadcrawler-output"
-ONETERA_INCOMING_TOPIC = "broadcrawler-input"
+ONETERA_INCOMING_TOPIC = "broadcrawler-frontera-input"
 
