@@ -41,7 +41,13 @@ class ScoreSpider(Spider):
 
     def make_requests_from_url(self, url):
         r = super(ScoreSpider, self).make_requests_from_url(url)
+        r.meta['score'] = self.get_score(r)
         return r
+
+    def get_score(self, r):
+        url_parts = urlparse_cached(r)
+        path_parts = url_parts.path.split('/')
+        return 1.0 / (len(path_parts) + 0.05*len(r.url))
 
     def parse(self, response):
         pc = self.contentprocessor.process_response(response)
@@ -67,7 +73,5 @@ class ScoreSpider(Spider):
         for link in pc.links:
             r = Request(url=link.url)
             r.meta.update(link_text=link.text)
-            url_parts = urlparse_cached(r)
-            path_parts = url_parts.path.split('/')
-            r.meta['score'] = 1.0 / (len(path_parts) + 0.05*len(r.url))
+            r.meta['score'] = self.get_score(r)
             yield r
