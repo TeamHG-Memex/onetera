@@ -72,14 +72,14 @@ LOG_LEVEL = 'INFO'
 #
 #
 MAX_REQUESTS = 0
-MAX_NEXT_REQUESTS = 64
+MAX_NEXT_REQUESTS = 256
 OVERUSED_SLOT_FACTOR = 5.0
 DELAY_ON_EMPTY = 5.0
 
 # Url storage
-BACKEND = 'onetera.backends.MemoryScoreBackend'
-'''
-BACKEND = 'frontier.backend.RDBMSScoreBackend'
+#BACKEND = 'onetera.backends.MemoryScoreBackend'
+
+BACKEND = 'onetera.backends.RDBMSScoreBackend'
 SQLALCHEMYBACKEND_ENGINE = 'sqlite:///url_storage.sqlite'
 SQLALCHEMYBACKEND_ENGINE_ECHO = False
 SQLALCHEMYBACKEND_DROP_ALL_TABLES = True
@@ -87,7 +87,6 @@ SQLALCHEMYBACKEND_CLEAR_CONTENT = True
 SQLALCHEMYBACKEND_MODELS = {
     'Page': 'onetera.backends.ScoredPage',
 }
-'''
 
 # Logging
 LOGGING_ENABLED = True
