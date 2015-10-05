@@ -21,14 +21,14 @@ class TopicClassifier(object):
             obj.topic[word] = freq_int
             sum += freq_int
 
-        for (k, v) in obj.topic.iteritems(): obj.topic[k] = v / float(sum)
+        for (k, v) in obj.topic.iteritems(): obj.topic[k.lower()] = v / float(sum)
 
     @classmethod
     def from_keywords(cls, include, exclude):
         obj = cls()
         count = len(include) + len(exclude)
         p = 1.0 / count
-        for word in include: obj.topic[word] = p
+        for word in include: obj.topic[word.lower()] = p
         obj.exclude_set = set(exclude)
         obj.threshold = p
         return obj
@@ -36,7 +36,7 @@ class TopicClassifier(object):
     def score_paragraphs(self, paragraphs):
         topic_probability = 0.0
         for p in paragraphs:
-            for token in word_tokenize(p):
+            for token in word_tokenize(p.lower()):
                 if token in self.topic:
                     topic_probability += self.topic[token]
                     continue
