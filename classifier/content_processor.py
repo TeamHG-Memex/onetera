@@ -77,4 +77,7 @@ class ContentProcessor(object):
                 continue
             if el.text and el.text.strip():
                 pc.paragraphs.append(el.text)
+            if el.tail and el.tail.strip():
+                pc.paragraphs.append(' ')
+                pc.paragraphs.append(el.tail)
         return pc
