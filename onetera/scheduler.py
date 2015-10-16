@@ -5,9 +5,32 @@ from scrapy import Request
 from json import loads, dumps
 import logging
 import traceback, sys
-
+from collections import deque
+from time import time
 
 logger = logging.getLogger("onetera.scheduler")
+
+
+class PeriodCounter(object):
+    def __init__(self, period):
+        self.observations = deque()
+        self.period = period
+
+    def add(self, timestamp, value):
+        self.observations.append((timestamp, value))
+
+        now = time()
+        while True:
+            o_ts, o_val = self.observations[0]
+            if now - o_ts > self.period:
+                self.observations.popleft()
+            else:
+                break
+            if not self.observations:
+                break
+
+    def sum(self):
+        return sum([x[1] for x in self.observations])
 
 
 class OneteraScheduler(FronteraScheduler):
@@ -21,7 +44,7 @@ class OneteraScheduler(FronteraScheduler):
         self.last_result_iteration = None
 
         settings = self.frontier.manager.settings
-        self.results_topic = settings.get("ONETERA_RESULTS_TOPIC")
+        self.results_topic = settings.get('ONETERA_RESULTS_TOPIC')
         kafka = KafkaClient(settings.get('KAFKA_LOCATION'))
         self.consumer = SimpleConsumer(kafka,
                                           settings.get('ONETERA_GROUP'),
@@ -30,6 +53,8 @@ class OneteraScheduler(FronteraScheduler):
                                           max_buffer_size=10485760,
                                           auto_commit_every_n=1)
         self.producer = SimpleProducer(kafka)
+        self.status_updates_topic = settings.get('ONETERA_STATUS_UPDATES_TOPIC')
+        self.stats = {}
 
     def result_callback(self, result):
         self.results.append(result)
@@ -131,3 +156,7 @@ class OneteraScheduler(FronteraScheduler):
         if produced > 0:
             logger.info("Wrote %d results to output topic.", produced)
             self.last_result_iteration = self.frontier.manager.iteration
+
+    def _send_status_updates(self):
+        pass
+
