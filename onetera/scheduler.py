@@ -188,7 +188,8 @@ class OneteraScheduler(FronteraScheduler):
         msg = {
             'discovered_last_5_min': self.discovery_rate.sum(),
             'download_rate': prate,
-            'state': self.current_state
+            'state': self.current_state,
+            'provider': 'onetera'
         }
         self.producer.send_messages(self.status_updates_topic, dumps(msg))
 
