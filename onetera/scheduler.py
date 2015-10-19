@@ -2,12 +2,37 @@
 from frontera.contrib.scrapy.schedulers.frontier import FronteraScheduler
 from kafka import KafkaClient, SimpleConsumer, SimpleProducer
 from scrapy import Request
+from twisted.internet import task
 from json import loads, dumps
 import logging
 import traceback, sys
+from collections import deque
+from time import time
 
 
 logger = logging.getLogger("onetera.scheduler")
+
+
+class PeriodCounter(object):
+    def __init__(self, period):
+        self.observations = deque()
+        self.period = period
+
+    def add(self, timestamp, value):
+        self.observations.append((timestamp, value))
+
+        now = time()
+        while True:
+            o_ts, o_val = self.observations[0]
+            if now - o_ts > self.period:
+                self.observations.popleft()
+            else:
+                break
+            if not self.observations:
+                break
+
+    def sum(self):
+        return sum([x[1] for x in self.observations])
 
 
 class OneteraScheduler(FronteraScheduler):
@@ -21,7 +46,7 @@ class OneteraScheduler(FronteraScheduler):
         self.last_result_iteration = None
 
         settings = self.frontier.manager.settings
-        self.results_topic = settings.get("ONETERA_RESULTS_TOPIC")
+        self.results_topic = settings.get('ONETERA_RESULTS_TOPIC')
         kafka = KafkaClient(settings.get('KAFKA_LOCATION'))
         self.consumer = SimpleConsumer(kafka,
                                           settings.get('ONETERA_GROUP'),
@@ -30,6 +55,16 @@ class OneteraScheduler(FronteraScheduler):
                                           max_buffer_size=10485760,
                                           auto_commit_every_n=1)
         self.producer = SimpleProducer(kafka)
+        self.results_task = task.LoopingCall(self._send_results)
+
+        self.discovery_rate = PeriodCounter(5 * 60)
+        self.status_updates_interval = settings.get('ONETERA_STATUS_UPDATES_INTERVAL')
+        self.status_updates_topic = settings.get('ONETERA_STATUS_UPDATES_TOPIC')
+        self.status_update_task = task.LoopingCall(self._send_status_updates)
+        self.stats = crawler.stats
+
+        self.pagesprev = 0
+        self.multiplier = 60.0 / self.status_updates_interval
 
     def result_callback(self, result):
         self.results.append(result)
@@ -37,6 +72,8 @@ class OneteraScheduler(FronteraScheduler):
     def open(self, spider):
         super(OneteraScheduler, self).open(spider)
         spider.set_result_callback(self.result_callback)
+        self.status_update_task.start(self.status_updates_interval)
+        self.results_task.start(20)
 
     def has_pending_requests(self):
         if not self.is_active:
@@ -51,13 +88,13 @@ class OneteraScheduler(FronteraScheduler):
         return None
 
     def process_spider_output(self, response, result, spider):
-        self._send_results()
+#        self._send_results()
         self._check_finished()
         return super(OneteraScheduler, self).process_spider_output(response, result, spider)
 
     def process_exception(self, request, exception, spider):
         super(OneteraScheduler, self).process_exception(request, exception, spider)
-        self._send_results()
+#        self._send_results()
         self._check_finished()
 
     def _check_finished(self):
@@ -131,3 +168,15 @@ class OneteraScheduler(FronteraScheduler):
         if produced > 0:
             logger.info("Wrote %d results to output topic.", produced)
             self.last_result_iteration = self.frontier.manager.iteration
+            self.discovery_rate.add(time(), produced)
+
+    def _send_status_updates(self):
+        pages = self.stats.get_value('response_received_count', 0)
+        prate = (pages - self.pagesprev) * self.multiplier
+        self.pagesprev = pages
+        msg = {
+            'discovered_last_5_min': self.discovery_rate.sum(),
+            'download_rate': prate,
+        }
+        self.producer.send_messages(self.status_updates_topic, dumps(msg))
+
