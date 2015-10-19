@@ -18,9 +18,9 @@ class PeriodCounter(object):
         self.observations = deque()
         self.period = period
 
-    def add(self, timestamp, value):
-        self.observations.append((timestamp, value))
-
+    def _purge(self):
+        if not self.observations:
+            return
         now = time()
         while True:
             o_ts, o_val = self.observations[0]
@@ -31,8 +31,15 @@ class PeriodCounter(object):
             if not self.observations:
                 break
 
+    def add(self, timestamp, value):
+        self.observations.append((timestamp, value))
+
     def sum(self):
+        self._purge()
         return sum([x[1] for x in self.observations])
+
+    def reset(self):
+        self.observations.clear()
 
 
 class OneteraScheduler(FronteraScheduler):
@@ -44,6 +51,7 @@ class OneteraScheduler(FronteraScheduler):
         self.results = []
         self.results_sent = 0
         self.last_result_iteration = None
+        self.current_state = 'STOPPED'
 
         settings = self.frontier.manager.settings
         self.results_topic = settings.get('ONETERA_RESULTS_TOPIC')
@@ -88,13 +96,11 @@ class OneteraScheduler(FronteraScheduler):
         return None
 
     def process_spider_output(self, response, result, spider):
-#        self._send_results()
         self._check_finished()
         return super(OneteraScheduler, self).process_spider_output(response, result, spider)
 
     def process_exception(self, request, exception, spider):
         super(OneteraScheduler, self).process_exception(request, exception, spider)
-#        self._send_results()
         self._check_finished()
 
     def _check_finished(self):
@@ -103,9 +109,11 @@ class OneteraScheduler(FronteraScheduler):
         if self.results_sent > self.job_config['nResults']:
             logger.info("Crawler reached the number of requested results. Crawling is stopping.")
             self.is_active = False
+            self.current_state = 'FINISHED'
         if self.last_result_iteration and self.frontier.manager.iteration - self.last_result_iteration > 10:
-            logger.info("It looks like crawler get stuck. Stopping crawling.")
+            logger.info("It looks like crawler got stuck. Stopping crawling.")
             self.is_active = False
+            self.current_state = 'GOTSTUCK'
 
     def _check_incoming(self):
         consumed = 0
@@ -123,6 +131,7 @@ class OneteraScheduler(FronteraScheduler):
                     self.results = []
                     self.results_sent = 0
                     self.last_result_iteration = None
+                    self.discovery_rate.reset()
 
                     self.job_config = {
                         'workspace': msg['workspace'],
@@ -138,6 +147,8 @@ class OneteraScheduler(FronteraScheduler):
                     self.frontier.add_seeds(requests)
                     self.frontier.spider.configure(self.job_config)
                     self.is_active = True
+
+                    self.current_state = 'CRAWLING'
                 finally:
                     consumed += 1
         except Exception, e:
@@ -177,6 +188,7 @@ class OneteraScheduler(FronteraScheduler):
         msg = {
             'discovered_last_5_min': self.discovery_rate.sum(),
             'download_rate': prate,
+            'state': self.current_state
         }
         self.producer.send_messages(self.status_updates_topic, dumps(msg))
 
