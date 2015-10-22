@@ -162,6 +162,7 @@ class OneteraScheduler(FronteraScheduler):
         produced = 0
         if not self.results:
             return
+
         for result in self.results:
             msg = {
                 "score": result['score'],
@@ -181,15 +182,19 @@ class OneteraScheduler(FronteraScheduler):
             self.last_result_iteration = self.frontier.manager.iteration
             self.discovery_rate.add(time(), produced)
 
-    def _send_status_updates(self):
+    def _get_and_update_download_rate(self):
         pages = self.stats.get_value('response_received_count', 0)
         prate = (pages - self.pagesprev) * self.multiplier
         self.pagesprev = pages
+        return prate
+
+    def _send_status_updates(self):
         msg = {
             'discovered_last_5_min': self.discovery_rate.sum(),
-            'download_rate': prate,
+            'download_rate': self._get_and_update_download_rate(),
             'state': self.current_state,
-            'provider': 'onetera'
+            'provider': 'onetera',
+            'timestamp': time()
         }
         self.producer.send_messages(self.status_updates_topic, dumps(msg))
 
