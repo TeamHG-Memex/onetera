@@ -1,0 +1,6 @@
+./backends.py
+./settings.py
+./__init__.py
+./spiders/__init__.py
+./spiders/score_spider.py
+./scheduler.py
